@@ -9,10 +9,10 @@ import os
 Init_max_div = 8.0
 
 gl_absorption_rate = .3
-gl_conversion_efficiency = .75
-gl_growth_threshold = .7
-gl_death_threshold = 1
+gl_growth_threshold = .4
+gl_death_threshold = 0
 gl_initial_concentration = 15
+gl_metabolic_rate = 1
 
 
 OUTPUT_FILE_NAME = os.path.expanduser("~/Dropbox/CompuCell Stuff/Final Project/FPRed/output.txt")
@@ -101,7 +101,8 @@ class ConstraintInitializerSteppable(SteppableBasePy):
             cellDict["cur_div"]=0  
             cellDict["Parent_ID"] = cell.id
             cellDict["Last_Stem_Cell_ID"] = cell.id
-
+            cellDict["Internal_Glucose_Storage"] = 5
+            
          
             cell.targetVolume=25  
             cell.lambdaVolume=10.0 
@@ -124,15 +125,19 @@ class GrowthSteppable(SteppableBasePy):
                 z = int(cell.zCOM)
                 GlucValue = GlucField[x,y,z]
                 GlucAbs = gl_absorption_rate * GlucValue
-                
+                cellDict["Internal_Glucose_Storage"] += .1 * (GlucAbs - gl_metabolic_rate)
+                                
                 GlucField[x,y,z]  = GlucValue - GlucAbs
                 
-                if (cell.targetVolume - cell.volume < 5):
-                    cell.targetVolume += gl_conversion_efficiency * GlucAbs / (gl_growth_threshold + GlucAbs)
+                if (cell.targetVolume - cell.volume < 5) and \
+                (cellDict["Internal_Glucose_Storage"] > 0):
+                    cell.targetVolume += 1.0 * \
+                    .9 * (GlucAbs - gl_metabolic_rate) \
+                    / (gl_growth_threshold + .9 * (GlucAbs - gl_metabolic_rate))
                     
                 
-                if GlucField[x,y,z] <= gl_death_threshold: 
-                    kill(self,cell,"Nutrient-Death", mcs)
+            if cellDict["Internal_Glucose_Storage"] <= gl_death_threshold: 
+                kill(self,cell,"Nutrient-Death", mcs)
 
                             
         
