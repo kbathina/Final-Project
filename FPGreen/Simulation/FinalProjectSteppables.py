@@ -10,22 +10,32 @@ Init_max_div = 8.0
 
 gl_absorption_rate = .3
 gl_conversion_efficiency = .75
-gl_growth_threshold = .4
+gl_growth_threshold = .3
 gl_death_threshold = 0
 gl_initial_concentration = 15
-gl_metabolic_rate = 1
 
-qui_threshold = 3
-pro_threshold = 5
+qui_threshold = 10
+qui_death_rate = .01
+pro_threshold = 15
 
 
-OUTPUT_FILE_NAME = os.path.expanduser("~/Dropbox/CompuCell Stuff/Final Project/FPRed/output.txt")
+OUTPUT_FILE_NAME = os.path.expanduser("~/Dropbox/CompuCell Stuff/Final Project/FPGreen/output.txt")
 outputFile = None
 
 def kill(steppable, cell, type, mcs):
     writeCell(steppable, type, mcs, cell)
     cell.targetVolume = 0
     cell.lambdaVolume = 100
+    
+def switchstate(steppable,cell, cellDict):
+    if cellDict["Internal_Glucose_Storage"] >= pro_threshold:
+        cellDict["state"] = "Proliferating"
+        cellDict["gl_metabolic_rate"] = .5
+        
+    if cellDict["Internal_Glucose_Storage"] <= qui_threshold:
+        cellDict["state"] = "Quiescent"
+        cellDict["gl_metabolic_rate"] = 0.25
+        cell.type = 3
 
 def initOutputFile(fname = OUTPUT_FILE_NAME):
     
@@ -100,12 +110,15 @@ class ConstraintInitializerSteppable(SteppableBasePy):
         initOutputFile()
         for cell in self.cellList:
             cellDict=self.getDictionaryAttribute(cell)
-            cellDict["p_stem"]= .1
+            cellDict["p_stem"]= .15
             cellDict["max_div"]= Init_max_div  
             cellDict["cur_div"]=0  
             cellDict["Parent_ID"] = cell.id
             cellDict["Last_Stem_Cell_ID"] = cell.id
-            cellDict["Internal_Glucose_Storage"] = 5
+            cellDict["Internal_Glucose_Storage"] = 17
+            cellDict["state"] = None 
+            switchstate(self,cell,cellDict)
+            cellDict["gl_metabolic_rate"] = .5
             
          
             cell.targetVolume=25  
@@ -123,25 +136,31 @@ class GrowthSteppable(SteppableBasePy):
         
         for cell in self.cellList:
             cellDict=self.getDictionaryAttribute(cell)
-            if (cell.type != 0) and (cell.targetVolume > 0):
+            if (cell.type != 0) and (cell.type != 3) \
+            and (cell.targetVolume > 0):
                 x = int(cell.xCOM)
                 y = int(cell.yCOM)
                 z = int(cell.zCOM)
                 GlucValue = GlucField[x,y,z]
                 GlucAbs = gl_absorption_rate * GlucValue
-                cellDict["Internal_Glucose_Storage"] += .1 * (GlucAbs - gl_metabolic_rate)
+                cellDict["Internal_Glucose_Storage"] += .1 * (GlucAbs - cellDict["gl_metabolic_rate"])
+                 
+                switchstate(self,cell,cellDict)
                                 
                 GlucField[x,y,z]  = GlucValue - GlucAbs
                 
                 if (cell.targetVolume - cell.volume < 5) and \
-                (cellDict["Internal_Glucose_Storage"] > 0):
+                (cellDict["state"] == "Proliferating"):
                     cell.targetVolume += gl_conversion_efficiency * \
-                    .9 * (GlucAbs - gl_metabolic_rate) \
-                    / (gl_growth_threshold + .9 * (GlucAbs - gl_metabolic_rate))
+                    .9 * (GlucAbs - cellDict["gl_metabolic_rate"]) \
+                    / (gl_growth_threshold + .9 * (GlucAbs - cellDict["gl_metabolic_rate"]))
                     
                 
             if cellDict["Internal_Glucose_Storage"] <= gl_death_threshold: 
                 kill(self,cell,"Nutrient-Death", mcs)
+
+            if cell.type == 3:
+                cell.targetVolume -= qui_death_rate * cell.targetVolume
 
                             
         

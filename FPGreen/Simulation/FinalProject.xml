@@ -10,14 +10,16 @@
        <Boundary_x>Periodic</Boundary_x> 
    </Potts>
    
-   <Plugin Name="CellType">
-      
-      <!-- Listing all cell types in the simulation -->
-      <CellType TypeId="0" TypeName="Medium"/>
-      <CellType TypeId="1" TypeName="Stem"/>
-      <CellType TypeId="2" TypeName="Somatic"/>
-   </Plugin>
 
+<Plugin Name="CellType">
+   
+   <!-- Listing all cell types in the simulation -->
+   <CellType TypeId="0" TypeName="Medium"/>
+   <CellType TypeId="1" TypeName="Stem"/>
+   <CellType TypeId="2" TypeName="Somatic"/>
+   <CellType TypeId="3" TypeName="Necrotic"/>
+</Plugin>
+  
    
     <Plugin Name="Volume">
     </Plugin>
@@ -31,18 +33,23 @@
       
       <!-- Module tracking center of mass of each cell -->
    </Plugin>
+
+<Plugin Name="Contact">
+   <!-- Specification of adhesion energies -->
+   <Energy Type1="Medium" Type2="Medium">20.0</Energy>
+   <Energy Type1="Medium" Type2="Stem">15.0</Energy>
+   <Energy Type1="Medium" Type2="Somatic">20.0</Energy>
+   <Energy Type1="Medium" Type2="Necrotic">20.0</Energy>
+   <Energy Type1="Stem" Type2="Stem">15.0</Energy>
+   <Energy Type1="Stem" Type2="Somatic">15.0</Energy>
+   <Energy Type1="Stem" Type2="Necrotic">15.0</Energy>
+   <Energy Type1="Somatic" Type2="Somatic">15.0</Energy>
+   <Energy Type1="Somatic" Type2="Necrotic">15.0</Energy>
+   <Energy Type1="Necrotic" Type2="Necrotic">10.0</Energy>
+   <NeighborOrder>3</NeighborOrder>
+</Plugin>
    
-   <Plugin Name="Contact">
-      <!-- Specification of adhesion energies -->
-      <Energy Type1="Medium" Type2="Medium">20.0</Energy>
-      <Energy Type1="Medium" Type2="Stem">15.0</Energy> 
-<!--         20 , 15, 20, 15, 15, 15, does spiral  -->
-      <Energy Type1="Medium" Type2="Somatic">20.0</Energy>
-      <Energy Type1="Stem" Type2="Stem">15.0</Energy>
-      <Energy Type1="Stem" Type2="Somatic">15.0</Energy>
-      <Energy Type1="Somatic" Type2="Somatic">15.0</Energy>
-      <NeighborOrder>3</NeighborOrder>
-   </Plugin>
+   
    
    <Steppable Type="BlobInitializer">
       
@@ -61,7 +68,7 @@
          <DiffusionData>
             <FieldName>Glucose</FieldName>
             <GlobalDiffusionConstant>4</GlobalDiffusionConstant>
-            <GlobalDecayConstant>.005</GlobalDecayConstant>
+            <GlobalDecayConstant>.01</GlobalDecayConstant>
          </DiffusionData>
          
          <SecretionData> 

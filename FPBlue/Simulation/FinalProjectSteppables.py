@@ -15,7 +15,7 @@ gl_initial_concentration = 15
 gl_metabolic_rate = 1
 
 
-OUTPUT_FILE_NAME = os.path.expanduser("~/Dropbox/CompuCell Stuff/Final Project/FPRed/output.txt")
+OUTPUT_FILE_NAME = os.path.expanduser("~/Dropbox/CompuCell Stuff/Final Project/FPBlue/output.txt")
 outputFile = None
 
 def kill(steppable, cell, type, mcs):
