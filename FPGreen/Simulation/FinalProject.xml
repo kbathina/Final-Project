@@ -67,7 +67,7 @@
       <DiffusionField Name="Glucose">
          <DiffusionData>
             <FieldName>Glucose</FieldName>
-            <GlobalDiffusionConstant>4</GlobalDiffusionConstant>
+            <GlobalDiffusionConstant>3</GlobalDiffusionConstant>
             <GlobalDecayConstant>.01</GlobalDecayConstant>
          </DiffusionData>
          
