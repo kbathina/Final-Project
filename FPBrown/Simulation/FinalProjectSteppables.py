@@ -6,13 +6,12 @@ import math as m
 import numpy
 import os
 
-Init_max_div = 4.0
-
-
-gl_conversion_efficiency = .85
-gl_death_threshold = 1.0
+Init_max_div = 8.0
 gl_initial_concentration = 15
-qui_death_rate = .5
+gl_conversion_efficiency = .75
+
+gl_death_threshold = .3
+qui_death_rate = .2
 
 
 
@@ -27,10 +26,10 @@ def kill(steppable, cell, type, mcs):
 def switchstate(steppable,cell, cellDict):
     if cellDict["Internal_Glucose_Storage"] >= cellDict["pro_threshold"]:
         cellDict["state"]  = "P"
-        cellDict["gl_metabolic_rate"] = 2
+        cellDict["gl_metabolic_rate"] = 1.2
         
     if cellDict["Internal_Glucose_Storage"] <= cellDict["qui_threshold"]:
-        cellDict["gl_metabolic_rate"] = 1.5
+        cellDict["gl_metabolic_rate"] = .7
         cell.type = 3  
         cellDict["state"]  = "Q"
         
@@ -108,7 +107,7 @@ class ConstraintInitializerSteppable(SteppableBasePy):
         initOutputFile()
         for cell in self.cellList:
             cellDict=self.getDictionaryAttribute(cell)
-            cellDict["p_stem"]= .15
+            cellDict["p_stem"]= .25
             cellDict["max_div"]= Init_max_div  
             cellDict["cur_div"]=0  
             cellDict["Parent_ID"] = cell.id
@@ -118,7 +117,7 @@ class ConstraintInitializerSteppable(SteppableBasePy):
             cellDict["qui_threshold"] = 2
             cellDict["pro_threshold"] = 4
             cellDict["gl_absorption_rate"] = .3
-            cellDict["gl_growth_threshold"] = .3
+            cellDict["gl_growth_threshold"] = .25
 
             switchstate(self,cell,cellDict)            
          
@@ -163,8 +162,10 @@ class GrowthSteppable(SteppableBasePy):
 
             if cell.type == 3:
                 cell.targetVolume -= qui_death_rate * cell.targetVolume
-                if cell.targetVolume <= .1:
-                    kill(self, cell, "Nutrient-Death", mcs)
+                if cell.targetVolume <= 1:
+                    writeCell(self, "Nutrient-Death", mcs, cell)
+                    cell.type = 0
+
 
                             
         
@@ -177,7 +178,8 @@ class MitosisSteppable(MitosisSteppableBase):
         self.mcs = mcs
         cells_to_divide=[]
         for cell in self.cellList:
-            if cell.volume>40:               
+            cellDict=self.getDictionaryAttribute(cell)
+            if (cell.volume>40) and ((cell.type == 2) or (cell.type == 1 and cellDict["state"]) == "P"):               
                 cells_to_divide.append(cell)               
         for cell in cells_to_divide:
             self.divideCellRandomOrientation(cell)
@@ -197,45 +199,47 @@ class MitosisSteppable(MitosisSteppableBase):
         childCell.targetVolume=parentCell.targetVolume
         childCell.lambdaVolume=parentCell.lambdaVolume
         
-        if random.random() < 0.01: 
-            x = round(random.gauss(0.0,.5),2)
-            if x >= 0:
-                pdict["max_div"] += x
-            else:
-                pdict["max_div"] = pdict["max_div"] / (1 - x / Init_max_div)
-                
-            writeCell(self, "MAXDIV-MUTATION", self.mcs, parentCell)
+        if parentCell.type == 1 or parentCell.type == 2:
         
-        if random.random() < 0.1:
-            x = round(random.gauss(0.0,.05),2)
-            if (pdict['p_stem'] < 1) and (pdict['p_stem'] > 0):
-                pdict["p_stem"] += x  
-                
-            writeCell(self, "PSTEM-MUTATION", self.mcs, parentCell)
+            if random.random() < 0.01: 
+                x = round(random.gauss(0.0,.5),2)
+                if x >= 0:
+                    pdict["max_div"] += x
+                else:
+                    pdict["max_div"] = pdict["max_div"] / (1 - x / Init_max_div)
+                    
+                writeCell(self, "MAXDIV-MUTATION", self.mcs, parentCell)
             
-        if random.random() < 0.01:
-            x = round(random.gauss(0.0,.05),2)
-            pdict["qui_threshold"] += x  
+            if random.random() < 0.1:
+                x = round(random.gauss(0.0,.05),2)
+                if (pdict['p_stem'] < 1) and (pdict['p_stem'] > 0):
+                    pdict["p_stem"] += x  
+                    
+                writeCell(self, "PSTEM-MUTATION", self.mcs, parentCell)
                 
-            writeCell(self, "Q-MUTATION", self.mcs, parentCell)
-      
-        if random.random() < 0.01:
-            x = round(random.gauss(0.0,.05),2)
-            pdict["pro_threshold"] += x  
+            if random.random() < 0.01:
+                x = round(random.gauss(0.0,.05),2)
+                pdict["qui_threshold"] += x  
+                    
+                writeCell(self, "Q-MUTATION", self.mcs, parentCell)
+          
+            if random.random() < 0.01:
+                x = round(random.gauss(0.0,.05),2)
+                pdict["pro_threshold"] += x  
+                    
+                writeCell(self, "P-MUTATION", self.mcs, parentCell)
                 
-            writeCell(self, "P-MUTATION", self.mcs, parentCell)
-            
-        if random.random() < 0.01:
-            x = round(random.gauss(0.0,.05),2)
-            pdict["gl_absorption_rate"] += x  
-                
-            writeCell(self, "ABSORPTION-MUTATION", self.mcs, parentCell)
-      
-        if random.random() < 0.01:
-            x = round(random.gauss(0.0,.05),2)
-            pdict["gl_growth_threshold"] += x  
-                
-            writeCell(self, "GROWTH_THRESHOLD-MUTATION", self.mcs, parentCell)
+            if random.random() < 0.01:
+                x = round(random.gauss(0.0,.05),2)
+                pdict["gl_absorption_rate"] += x  
+                    
+                writeCell(self, "ABSORPTION-MUTATION", self.mcs, parentCell)
+          
+            if random.random() < 0.01:
+                x = round(random.gauss(0.0,.05),2)
+                pdict["gl_growth_threshold"] += x  
+                    
+                writeCell(self, "GROWTH_THRESHOLD-MUTATION", self.mcs, parentCell)
          
         for key,value in pdict.items():
             cdict[key] = value
